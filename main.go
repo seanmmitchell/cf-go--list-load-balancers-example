@@ -63,22 +63,34 @@ func GetLBsInZone(client *cloudflare.Client, zoneID string) {
 	if err2 != nil {
 		fmt.Println("[-] ERROR - Failed to list load balancers in Cloudflare Zone.")
 		fmt.Println(err2)
-		os.Exit(1)
 	}
 
-	for _, loadBalancer := range lbs.Result {
-		fmt.Printf("\tLoad Balancer ID: %s || Name: %s // Enabled: %v\r\n", loadBalancer.ID, loadBalancer.Name, loadBalancer.Enabled)
+	if lbs.Result == nil {
+		fmt.Println("[/] No LBs in Cloudflare Zone.")
 	}
 
-	// Get additional pages?
+	ItterateLBs(lbs.Result)
+
+	// Could technically check sizes of pages before attempting to verify if there are additional pages.
+	for {
+		nextPage, err := lbs.GetNextPage()
+		if err != nil {
+			fmt.Println("[-] ERROR - Failed to list the next page of load balancers in Cloudflare Zone.")
+			fmt.Println(err2)
+		}
+
+		if nextPage == nil {
+			//fmt.Println("[/] No additional Load Balancer pages in Cloudflare Zone.")
+			break
+		} else {
+			ItterateLBs(nextPage.Result)
+		}
+	}
 
 }
 
-func GetLB(client *cloudflare.Client, lbID string) (*load_balancers.LoadBalancer, error) {
-	lb, err1 := client.LoadBalancers.Get(context.Background(), lbID, load_balancers.LoadBalancerGetParams{})
-	if err1 != nil {
-		return nil, err1
+func ItterateLBs(lbs []load_balancers.LoadBalancer) {
+	for _, loadBalancer := range lbs {
+		fmt.Printf("\tLoad Balancer ID: %s || Name: %s // Enabled: %v\r\n", loadBalancer.ID, loadBalancer.Name, loadBalancer.Enabled)
 	}
-
-	return lb, nil
 }
